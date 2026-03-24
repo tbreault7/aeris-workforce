@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aeris — Admin Dashboard</title>
+<style>
+  :root {
+    --brand-dark: #1A3A5C;
+    --brand-mid:  #2E6DA4;
+    --brand-lite: #D6E4F0;
+    --accent:     #0078D4;
+    --success:    #107C10;
+    --danger:     #C50F1F;
+    --warning:    #9A4F00;
+    --gray-50:    #F8F9FA;
+    --gray-100:   #F0F2F4;
+    --gray-200:   #E1E5EA;
+    --gray-400:   #9BA3AE;
+    --gray-700:   #3D4552;
+    --gray-900:   #1B1F26;
+    --radius:     8px;
+    --shadow:     0 2px 12px rgba(0,0,0,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: var(--gray-100);
+         color: var(--gray-900); min-height: 100vh; }
+
+  /* ── Layout ── */
+  .app-header {
+    background: var(--brand-dark); color: white; height: 56px;
+    display: flex; align-items: center; padding: 0 24px; gap: 20px;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  .app-header .logo { font-size: 17px; font-weight: 700; flex: 1; }
+  .app-header .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    font-weight: 600; color: rgba(255,255,255,.7); border: none; background: none;
+    transition: all .15s;
+  }
+  .nav-tab:hover    { background: rgba(255,255,255,.1); color: white; }
+  .nav-tab.active   { background: rgba(255,255,255,.2); color: white; }
+  .admin-badge      { font-size: 11px; background: rgba(255,255,255,.15);
+                      border-radius: 10px; padding: 2px 10px; color: rgba(255,255,255,.8); }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── Cards ── */
+  .card {
+    background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .card-header {
+    background: var(--brand-dark); color: white; padding: 12px 20px;
+    font-size: 14px; font-weight: 700; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ── Stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  .stat-card {
+    background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 16px 20px; border-left: 4px solid var(--brand-mid);
+  }
+  .stat-card .stat-val { font-size: 32px; font-weight: 700; color: var(--brand-dark); }
+  .stat-card .stat-lbl { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+  .stat-card.success  { border-left-color: var(--success); }
+  .stat-card.warning  { border-left-color: #F59E0B; }
+  .stat-card.danger   { border-left-color: var(--danger); }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--gray-50); padding: 10px 14px; text-align: left;
+    font-size: 11px; font-weight: 700; color: var(--gray-400);
+    text-transform: uppercase; letter-spacing: .5px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  tbody td {
+    padding: 10px 14px; border-bottom: 1px solid var(--gray-200);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--gray-50); }
+
+  /* ── Pills ── */
+  .pill {
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 700;
+  }
+  .pill.submitted { background: #D4EDDA; color: #155724; }
+  .pill.pending   { background: #FFF3CD; color: #856404; }
+  .pill.draft     { background: #CCE5FF; color: #004085; }
+  .pill.open      { background: #D4EDDA; color: #155724; }
+  .pill.closed    { background: #F8D7DA; color: #721C24; }
+  .pill.active    { background: #D4EDDA; color: #155724; }
+  .pill.inactive  { background: var(--gray-200); color: var(--gray-700); }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
+    cursor: pointer; border: none; transition: all .15s; display: inline-flex;
+    align-items: center; gap: 5px;
+  }
+  .btn-sm   { padding: 4px 10px; font-size: 11px; }
+  .btn-primary { background: var(--brand-mid); color: white; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-danger  { background: var(--danger);  color: white; }
+  .btn-outline { background: white; border: 1px solid var(--gray-200); color: var(--gray-700); }
+  .btn-outline:hover { background: var(--gray-100); }
+  .btn-warn    { background: #F59E0B; color: white; }
+
+  /* ── Forms ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 11px; font-weight: 700; color: var(--gray-400);
+                      text-transform: uppercase; letter-spacing: .5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    border: 1px solid var(--gray-200); border-radius: 6px; padding: 8px 10px;
+    font-size: 13px; font-family: Arial, sans-serif; transition: border-color .15s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,120,212,.15);
+  }
+  .form-actions { padding: 12px 20px; border-top: 1px solid var(--gray-200);
+                  display: flex; gap: 8px; justify-content: flex-end; }
+  .full-col { grid-column: 1 / -1; }
+
+  /* ── Week selector ── */
+  .week-bar {
+    display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .week-bar .week-lbl { font-weight: 700; font-size: 15px; color: var(--brand-dark);
+                        flex: 1; }
+  .week-bar input[type="date"] {
+    border: 1px solid var(--gray-200); border-radius: 6px; padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  /* ── Login overlay ── */
+  .login-overlay {
+    position: fixed; inset: 0; background: var(--brand-dark);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .login-box {
+    background: white; border-radius: 12px; padding: 40px;
+    width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,.2);
+  }
+  .login-box h2 { color: var(--brand-dark); margin-bottom: 6px; }
+  .login-box p  { color: var(--gray-400); font-size: 13px; margin-bottom: 24px; }
+  .login-box input {
+    width: 100%; border: 1px solid var(--gray-200); border-radius: 6px;
+    padding: 10px 12px; font-size: 14px; margin-bottom: 12px;
+  }
+  .login-box .btn { width: 100%; justify-content: center; padding: 11px; font-size: 14px; }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; }
+
+  /* ── Modal ── */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: white; border-radius: 12px; width: 520px; max-width: 95vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,.2); overflow: hidden;
+  }
+  .modal-header {
+    background: var(--brand-dark); color: white; padding: 14px 20px;
+    font-weight: 700; display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-close { background: none; border: none; color: white; font-size: 20px;
+                 cursor: pointer; padding: 0 4px; }
+
+  /* ── Toast ── */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+                     display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15); animation: slideIn .3s ease;
+  }
+  .toast.success { background: var(--success); color: white; }
+  .toast.error   { background: var(--danger);  color: white; }
+  .toast.info    { background: var(--brand-mid); color: white; }
+  @keyframes slideIn { from { transform: translateX(120%); opacity: 0; }
+                       to   { transform: translateX(0);    opacity: 1; } }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .actions-cell { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  @media (max-width: 700px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .form-grid  { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <h2>Admin Dashboard</h2>
+    <p>Aeris Technical Solutions · Workforce Management</p>
+    <input type="password" id="pw-input" placeholder="Admin password" autocomplete="current-password">
+    <div id="login-error" class="login-error"></div>
+    <button class="btn btn-primary" onclick="login()">Sign In</button>
+  </div>
+</div>
+
+<header class="app-header">
+  <div class="logo">Aeris — Admin</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('submissions', this)">Submissions</button>
+    <button class="nav-tab" onclick="switchTab('employees', this)">Employees</button>
+    <button class="nav-tab" onclick="switchTab('pos', this)">Purchase Orders</button>
+  </div>
+  <span class="admin-badge">Admin</span>
+</header>
+
+<div class="container">
+
+  <!-- ── SUBMISSIONS TAB ── -->
+  <div id="tab-submissions" class="tab-panel active">
+    <div class="stats-row">
+      <div class="stat-card success"><div class="stat-val" id="stat-submitted">—</div>
+        <div class="stat-lbl">Submitted</div></div>
+      <div class="stat-card warning"><div class="stat-val" id="stat-pending">—</div>
+        <div class="stat-lbl">Pending</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-draft">—</div>
+        <div class="stat-lbl">Saved Draft</div></div>
+      <div class="stat-card danger"><div class="stat-val" id="stat-total">—</div>
+        <div class="stat-lbl">Total Active Employees</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span>Weekly Submission Status</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="week-picker" onchange="loadSubmissions()">
+          <button class="btn btn-outline btn-sm" onclick="loadSubmissions()">↻ Refresh</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Employee</th><th>Email</th><th>Status</th><th>Updated</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="submissions-tbody">
+          <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">
+            Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── EMPLOYEES TAB ── -->
+  <div id="tab-employees" class="tab-panel">
+    <div class="card">
+      <div class="card-header">
+        <span>Employees</span>
+        <button class="btn btn-primary btn-sm" onclick="showModal('employee')">+ Add Employee</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Name</th><th>Email</th><th>Assigned POs</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="employees-tbody">
+          <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">
+            Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── POs TAB ── -->
+  <div id="tab-pos" class="tab-panel">
+    <div class="card">
+      <div class="card-header">
+        <span>Purchase Orders</span>
+        <button class="btn btn-primary btn-sm" onclick="showModal('po')">+ Add PO</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th>PO Number</th><th>Client</th><th>Description</th>
+          <th>Budget Hours</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="pos-tbody">
+          <tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px">
+            Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal container -->
+<div id="modal-bg" class="modal-bg" style="display:none" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <span id="modal-title">—</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const API = ''; // Same-origin on Railway — FastAPI serves everything
+let ADMIN_PW = '';
+let ALL_POS  = [];
+let ALL_EMPS = [];
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+document.getElementById('pw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+async function login() {
+  const pw = document.getElementById('pw-input').value;
+  try {
+    await apiFetch('/admin/employees', pw);
+    ADMIN_PW = pw;
+    document.getElementById('login-overlay').style.display = 'none';
+    initDashboard();
+  } catch {
+    document.getElementById('login-error').textContent = 'Incorrect password.';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function initDashboard() {
+  // Default week picker to current Monday
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay() + 1);
+  document.getElementById('week-picker').value = d.toISOString().slice(0, 10);
+
+  loadSubmissions();
+  loadEmployees();
+  loadPOs();
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function apiFetch(path, pw, opts = {}) {
+  const res = await fetch(`${API}/api${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Password': pw || ADMIN_PW,
+    },
+    ...opts,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ── Submissions ───────────────────────────────────────────────────────────────
+async function loadSubmissions() {
+  const week = document.getElementById('week-picker').value;
+  const tbody = document.getElementById('submissions-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">Loading...</td></tr>`;
+
+  try {
+    const data = await apiFetch(`/admin/submissions?week=${week}`);
+    const subs = data.submissions || [];
+
+    const counts = { submitted: 0, pending: 0, draft: 0 };
+    subs.forEach(s => { if (counts[s.status] !== undefined) counts[s.status]++; });
+    document.getElementById('stat-submitted').textContent = counts.submitted;
+    document.getElementById('stat-pending').textContent   = counts.pending;
+    document.getElementById('stat-draft').textContent     = counts.draft;
+    document.getElementById('stat-total').textContent     = subs.length;
+
+    tbody.innerHTML = '';
+    if (!subs.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">No employees found.</td></tr>`;
+      return;
+    }
+
+    subs.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${s.employee_name}</strong></td>
+        <td style="color:var(--gray-400)">${s.email}</td>
+        <td><span class="pill ${s.status}">${s.status}${s.zero_hours ? ' (zero hrs)' : ''}</span></td>
+        <td style="color:var(--gray-400);font-size:12px">${s.updated_at ? new Date(s.updated_at).toLocaleString() : '—'}</td>
+        <td>
+          <div class="actions-cell">
+            ${s.status !== 'submitted' ? `<button class="btn btn-warn btn-sm" onclick="sendReminder('${s.employee_id}','${s.employee_name}')">📧 Remind</button>` : ''}
+            <button class="btn btn-outline btn-sm" onclick="getMagicLink('${s.employee_id}')">🔗 Link</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    toast(`Error loading submissions: ${e.message}`, 'error');
+  }
+}
+
+async function sendReminder(empId, empName) {
+  if (!confirm(`Send reminder to ${empName}?`)) return;
+  try {
+    const week = document.getElementById('week-picker').value;
+    await apiFetch(`/admin/remind/${empId}?week=${week}`, ADMIN_PW, { method: 'POST', body: '{}' });
+    toast(`Reminder sent to ${empName}`, 'success');
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+async function getMagicLink(empId) {
+  const week = document.getElementById('week-picker').value;
+  try {
+    const data = await apiFetch(`/admin/magic-link?employee_id=${empId}&week=${week}`);
+    await navigator.clipboard.writeText(data.url).catch(() => {});
+    showModal('link', data.url);
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+// ── Employees ─────────────────────────────────────────────────────────────────
+async function loadEmployees() {
+  const tbody = document.getElementById('employees-tbody');
+  try {
+    ALL_EMPS = await apiFetch('/admin/employees');
+    tbody.innerHTML = '';
+    if (!ALL_EMPS.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">No employees yet. Add one above.</td></tr>`;
+      return;
+    }
+    ALL_EMPS.forEach(emp => {
+      const poIds = JSON.parse(emp.AssignedPOs || '[]');
+      const poLabels = poIds.map(id => {
+        const po = ALL_POS.find(p => p.RowKey === id);
+        return po ? po.PONumber : id;
+      }).join(', ');
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${emp.Name}</strong></td>
+        <td style="color:var(--gray-400)">${emp.Email}</td>
+        <td style="font-size:12px">${poLabels || '—'}</td>
+        <td><span class="pill ${emp.Active ? 'active' : 'inactive'}">${emp.Active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn btn-outline btn-sm" onclick="showModal('employee-edit','${emp.RowKey}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="toggleEmployee('${emp.RowKey}', ${!emp.Active})">${emp.Active ? 'Deactivate' : 'Activate'}</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    toast(`Error loading employees: ${e.message}`, 'error');
+  }
+}
+
+async function saveEmployee(empId) {
+  const name  = document.getElementById('f-emp-name').value.trim();
+  const email = document.getElementById('f-emp-email').value.trim();
+  const poIds = [...document.getElementById('f-emp-pos').selectedOptions].map(o => o.value);
+
+  if (!name || !email) { toast('Name and email are required', 'error'); return; }
+
+  try {
+    if (empId) {
+      await apiFetch(`/admin/employees/${empId}`, ADMIN_PW, {
+        method: 'PATCH',
+        body: JSON.stringify({ name, email, assigned_pos: poIds }),
+      });
+    } else {
+      await apiFetch('/admin/employees', ADMIN_PW, {
+        method: 'POST',
+        body: JSON.stringify({ name, email, assigned_pos: poIds }),
+      });
+    }
+    closeModal();
+    toast(`Employee ${empId ? 'updated' : 'created'}.`, 'success');
+    loadEmployees();
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+async function toggleEmployee(empId, newActive) {
+  if (!confirm(`${newActive ? 'Activate' : 'Deactivate'} this employee?`)) return;
+  try {
+    await apiFetch(`/admin/employees/${empId}`, ADMIN_PW, {
+      method: 'PATCH',
+      body: JSON.stringify({ active: newActive }),
+    });
+    toast('Updated.', 'success');
+    loadEmployees();
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+// ── POs ───────────────────────────────────────────────────────────────────────
+async function loadPOs() {
+  const tbody = document.getElementById('pos-tbody');
+  try {
+    ALL_POS = await apiFetch('/admin/pos');
+    tbody.innerHTML = '';
+    if (!ALL_POS.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px">No POs yet. Add one above.</td></tr>`;
+      return;
+    }
+    ALL_POS.forEach(po => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${po.PONumber}</strong></td>
+        <td>${po.Client || '—'}</td>
+        <td style="font-size:12px;color:var(--gray-400)">${po.Description || '—'}</td>
+        <td style="text-align:right">${po.BudgetHours || '—'}</td>
+        <td><span class="pill ${po.Status || 'open'}">${po.Status || 'open'}</span></td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn btn-outline btn-sm" onclick="showModal('po-edit','${po.RowKey}')">Edit</button>
+            <button class="btn btn-${po.Status === 'open' ? 'danger' : 'success'} btn-sm"
+              onclick="togglePO('${po.RowKey}','${po.Status === 'open' ? 'closed' : 'open'}')">
+              ${po.Status === 'open' ? 'Close' : 'Reopen'}
+            </button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    toast(`Error loading POs: ${e.message}`, 'error');
+  }
+}
+
+async function savePO(poId) {
+  const number      = document.getElementById('f-po-number').value.trim();
+  const client      = document.getElementById('f-po-client').value.trim();
+  const description = document.getElementById('f-po-desc').value.trim();
+  const budget      = parseFloat(document.getElementById('f-po-budget').value) || 0;
+
+  if (!number || !client) { toast('PO number and client are required', 'error'); return; }
+
+  try {
+    if (poId) {
+      await apiFetch(`/admin/pos/${poId}`, ADMIN_PW, {
+        method: 'PATCH',
+        body: JSON.stringify({ ponumber: number, client, description, budgethours: budget }),
+      });
+    } else {
+      await apiFetch('/admin/pos', ADMIN_PW, {
+        method: 'POST',
+        body: JSON.stringify({ number, client, description, budget_hours: budget }),
+      });
+    }
+    closeModal();
+    toast(`PO ${poId ? 'updated' : 'created'}.`, 'success');
+    loadPOs();
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+async function togglePO(poId, newStatus) {
+  try {
+    await apiFetch(`/admin/pos/${poId}`, ADMIN_PW, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus }),
+    });
+    toast(`PO ${newStatus}.`, 'success');
+    loadPOs();
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+// ── Modals ─────────────────────────────────────────────────────────────────────
+function showModal(type, data) {
+  const bg    = document.getElementById('modal-bg');
+  const title = document.getElementById('modal-title');
+  const body  = document.getElementById('modal-body');
+  bg.style.display = 'flex';
+
+  const poOptions = ALL_POS
+    .filter(p => p.Status === 'open')
+    .map(p => `<option value="${p.RowKey}">${p.PONumber} — ${p.Client}</option>`)
+    .join('');
+
+  if (type === 'employee') {
+    title.textContent = 'Add Employee';
+    body.innerHTML = `
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name</label><input id="f-emp-name" placeholder="Jane Smith"></div>
+        <div class="form-group"><label>Email</label><input id="f-emp-email" type="email" placeholder="jane@aeristech.com"></div>
+        <div class="form-group full-col">
+          <label>Assigned POs (hold Ctrl/Cmd to select multiple)</label>
+          <select id="f-emp-pos" multiple size="4">${poOptions}</select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEmployee(null)">Create Employee</button>
+      </div>`;
+  }
+
+  else if (type === 'employee-edit') {
+    const emp   = ALL_EMPS.find(e => e.RowKey === data) || {};
+    const selIds = JSON.parse(emp.AssignedPOs || '[]');
+    const poOptsEdit = ALL_POS
+      .filter(p => p.Status === 'open' || selIds.includes(p.RowKey))
+      .map(p => `<option value="${p.RowKey}" ${selIds.includes(p.RowKey) ? 'selected' : ''}>${p.PONumber} — ${p.Client}</option>`)
+      .join('');
+
+    title.textContent = `Edit: ${emp.Name}`;
+    body.innerHTML = `
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name</label>
+          <input id="f-emp-name" value="${emp.Name || ''}"></div>
+        <div class="form-group"><label>Email</label>
+          <input id="f-emp-email" type="email" value="${emp.Email || ''}"></div>
+        <div class="form-group full-col">
+          <label>Assigned POs (hold Ctrl/Cmd to select multiple)</label>
+          <select id="f-emp-pos" multiple size="4">${poOptsEdit}</select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEmployee('${data}')">Save Changes</button>
+      </div>`;
+  }
+
+  else if (type === 'po') {
+    title.textContent = 'Add Purchase Order';
+    body.innerHTML = `
+      <div class="form-grid">
+        <div class="form-group"><label>PO Number</label><input id="f-po-number" placeholder="AC232546"></div>
+        <div class="form-group"><label>Client Name</label><input id="f-po-client" placeholder="ACME Corp"></div>
+        <div class="form-group full-col"><label>Description</label>
+          <input id="f-po-desc" placeholder="IT services engagement Q2 2025"></div>
+        <div class="form-group"><label>Budget Hours</label>
+          <input id="f-po-budget" type="number" placeholder="240"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="savePO(null)">Create PO</button>
+      </div>`;
+  }
+
+  else if (type === 'po-edit') {
+    const po = ALL_POS.find(p => p.RowKey === data) || {};
+    title.textContent = `Edit PO: ${po.PONumber}`;
+    body.innerHTML = `
+      <div class="form-grid">
+        <div class="form-group"><label>PO Number</label>
+          <input id="f-po-number" value="${po.PONumber || ''}"></div>
+        <div class="form-group"><label>Client Name</label>
+          <input id="f-po-client" value="${po.Client || ''}"></div>
+        <div class="form-group full-col"><label>Description</label>
+          <input id="f-po-desc" value="${po.Description || ''}"></div>
+        <div class="form-group"><label>Budget Hours</label>
+          <input id="f-po-budget" type="number" value="${po.BudgetHours || ''}"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="savePO('${data}')">Save Changes</button>
+      </div>`;
+  }
+
+  else if (type === 'link') {
+    title.textContent = 'Magic Link';
+    body.innerHTML = `
+      <div style="padding:20px">
+        <p style="font-size:13px;color:var(--gray-700);margin-bottom:12px">
+          This link was copied to your clipboard. Share it with the employee to access their timesheet directly.</p>
+        <input type="text" value="${data}" readonly
+          style="width:100%;border:1px solid var(--gray-200);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--brand-mid)">
+        <p style="font-size:11px;color:var(--gray-400);margin-top:8px">
+          Link expires after 10 days. One link per employee per week.</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="closeModal()">Done</button>
+      </div>`;
+  }
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-bg')) return;
+  document.getElementById('modal-bg').style.display = 'none';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info', duration = 4000) {
+  const t = document.createElement('div');
+  t.className   = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+</script>
+</body>
+</html>
