@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aeris — Timesheet Portal</title>
+<style>
+  :root {
+    --brand-dark: #1A3A5C;
+    --brand-mid:  #2E6DA4;
+    --brand-lite: #D6E4F0;
+    --accent:     #0078D4;
+    --success:    #107C10;
+    --danger:     #C50F1F;
+    --gray-50:    #F8F9FA;
+    --gray-100:   #F0F2F4;
+    --gray-200:   #E1E5EA;
+    --gray-400:   #9BA3AE;
+    --gray-700:   #3D4552;
+    --gray-900:   #1B1F26;
+    --radius:     8px;
+    --shadow:     0 2px 12px rgba(0,0,0,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: var(--gray-100); color: var(--gray-900);
+         min-height: 100vh; }
+
+  /* ── Header ── */
+  .app-header {
+    background: var(--brand-dark); color: white; padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  .app-header .logo { font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+  .app-header .week-badge {
+    background: rgba(255,255,255,.15); border-radius: 20px;
+    padding: 4px 14px; font-size: 13px; color: rgba(255,255,255,.9);
+  }
+  .app-header .emp-name { font-size: 13px; color: rgba(255,255,255,.75); }
+
+  /* ── Layout ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── Week nav ── */
+  .week-nav {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+    background: white; border-radius: var(--radius); padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+  .week-nav button {
+    background: none; border: 1px solid var(--gray-200); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; font-size: 18px; color: var(--brand-mid);
+    transition: background .15s;
+  }
+  .week-nav button:hover { background: var(--gray-100); }
+  .week-nav .week-label { font-size: 15px; font-weight: 700; color: var(--brand-dark);
+                          flex: 1; text-align: center; }
+  .week-nav .status-pill {
+    font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 20px;
+  }
+  .status-pill.pending    { background: #FFF3CD; color: #856404; }
+  .status-pill.draft      { background: #CCE5FF; color: #004085; }
+  .status-pill.submitted  { background: #D4EDDA; color: #155724; }
+
+  /* ── Card ── */
+  .card {
+    background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .card-header {
+    background: var(--brand-dark); color: white; padding: 12px 20px;
+    font-size: 14px; font-weight: 700; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ── Timesheet grid ── */
+  .timesheet-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .timesheet-table th {
+    background: var(--brand-dark); color: white; padding: 8px 10px;
+    text-align: center; font-size: 12px; font-weight: 700;
+    border-right: 1px solid rgba(255,255,255,.15);
+  }
+  .timesheet-table th:first-child { text-align: left; min-width: 200px; }
+  .timesheet-table th:nth-child(2){ min-width: 140px; }
+  .timesheet-table td {
+    padding: 6px 4px; border-bottom: 1px solid var(--gray-200);
+    border-right: 1px solid var(--gray-200); text-align: center;
+  }
+  .timesheet-table td:first-child { padding: 6px 10px; text-align: left; }
+  .timesheet-table td:nth-child(2){ padding: 6px 8px; }
+  .timesheet-table tr:nth-child(even) td { background: var(--gray-50); }
+  .timesheet-table tr:hover td { background: var(--brand-lite) !important; }
+  .timesheet-table .totals-row td {
+    background: var(--brand-mid) !important; color: white;
+    font-weight: 700; font-size: 13px;
+  }
+  .timesheet-table .weekend-col { background: rgba(0,0,0,.03) !important; }
+
+  input.hours {
+    width: 52px; padding: 5px 4px; border: 1px solid var(--gray-200);
+    border-radius: 4px; text-align: center; font-size: 13px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input.hours:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,120,212,.2);
+  }
+  input.hours:read-only { background: var(--gray-100); color: var(--gray-400); }
+
+  .description-input {
+    width: 100%; border: none; background: transparent; font-size: 13px;
+    font-family: Arial, sans-serif; color: var(--gray-900); padding: 2px 0;
+  }
+  .description-input:focus { outline: none; }
+
+  select.po-select {
+    width: 100%; border: 1px solid var(--gray-200); border-radius: 4px;
+    font-size: 12px; padding: 5px 6px; background: white; cursor: pointer;
+  }
+  select.po-select:focus { outline: none; border-color: var(--accent); }
+
+  .row-total {
+    font-weight: 700; color: var(--accent); font-size: 13px;
+  }
+
+  .delete-btn {
+    background: none; border: none; cursor: pointer; padding: 4px 8px;
+    color: var(--gray-400); font-size: 16px; border-radius: 4px;
+    transition: color .15s, background .15s;
+  }
+  .delete-btn:hover { color: var(--danger); background: #FEE; }
+
+  /* ── Add row ── */
+  .add-row-btn {
+    margin: 12px 16px; background: none; border: 1px dashed var(--gray-400);
+    border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px;
+    color: var(--brand-mid); display: flex; align-items: center; gap: 6px;
+    transition: all .15s; width: calc(100% - 32px);
+  }
+  .add-row-btn:hover { border-color: var(--brand-mid); background: var(--brand-lite); }
+
+  /* ── Actions ── */
+  .actions {
+    display: flex; gap: 12px; padding: 16px 20px; justify-content: flex-end;
+    border-top: 1px solid var(--gray-200);
+  }
+  .btn {
+    padding: 9px 22px; border-radius: 6px; font-size: 14px; font-weight: 700;
+    cursor: pointer; border: none; transition: all .15s; display: flex;
+    align-items: center; gap: 6px;
+  }
+  .btn-outline { background: white; border: 1px solid var(--gray-300);
+                 color: var(--gray-700); }
+  .btn-outline:hover { background: var(--gray-100); }
+  .btn-primary { background: var(--brand-mid); color: white; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { filter: brightness(1.1); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Attachments ── */
+  .upload-area {
+    border: 2px dashed var(--gray-300); border-radius: var(--radius);
+    padding: 24px; text-align: center; cursor: pointer; transition: all .2s;
+    margin: 16px;
+  }
+  .upload-area:hover, .upload-area.drag-over {
+    border-color: var(--brand-mid); background: var(--brand-lite);
+  }
+  .upload-area input { display: none; }
+  .upload-area p { color: var(--gray-400); font-size: 13px; margin-top: 6px; }
+  .upload-icon { font-size: 28px; }
+
+  .file-list { padding: 0 16px 16px; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    border: 1px solid var(--gray-200); border-radius: 6px; margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .file-item .file-icon { font-size: 18px; }
+  .file-item .file-name { flex: 1; color: var(--gray-700); }
+  .file-item .file-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .file-status.uploading { background: #CCE5FF; color: #004085; }
+  .file-status.done      { background: #D4EDDA; color: #155724; }
+  .file-status.error     { background: #F8D7DA; color: #721C24; }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15); animation: slideIn .3s ease;
+    max-width: 360px;
+  }
+  .toast.success { background: var(--success); color: white; }
+  .toast.error   { background: var(--danger);  color: white; }
+  .toast.info    { background: var(--brand-mid); color: white; }
+  @keyframes slideIn { from { transform: translateX(120%); opacity: 0; }
+                       to   { transform: translateX(0);    opacity: 1; } }
+
+  /* ── Locked banner ── */
+  .locked-banner {
+    background: #D4EDDA; border: 1px solid #C3E6CB; border-radius: var(--radius);
+    padding: 14px 20px; margin-bottom: 16px; display: flex; align-items: center;
+    gap: 10px; font-size: 14px; color: #155724;
+  }
+
+  /* ── Loading ── */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 300px; flex-direction: column; gap: 16px;
+    color: var(--gray-400);
+  }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--gray-200);
+    border-top-color: var(--brand-mid); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Error state ── */
+  .error-state {
+    text-align: center; padding: 48px 24px; color: var(--gray-400);
+  }
+  .error-state h2 { color: var(--danger); margin-bottom: 8px; }
+
+  /* ── Notes textarea ── */
+  textarea.notes-input {
+    width: 100%; border: none; background: transparent; font-size: 12px;
+    font-family: Arial, sans-serif; resize: none; min-height: 32px;
+    color: var(--gray-700);
+  }
+  textarea.notes-input:focus { outline: none; }
+
+  @media (max-width: 700px) {
+    .timesheet-table { font-size: 11px; }
+    input.hours { width: 40px; font-size: 11px; }
+    .container { padding: 12px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">Aeris Technical Solutions</div>
+  <div id="header-week" class="week-badge">—</div>
+  <div id="header-emp"  class="emp-name">Loading...</div>
+</header>
+
+<div class="container">
+  <div id="app">
+    <div class="loading">
+      <div class="spinner"></div>
+      <span>Loading your timesheet...</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const API = ''; // Same-origin on Railway — FastAPI serves everything
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let STATE = {
+  token:      null,
+  employee:   null,
+  week:       null,
+  weekOffset: 0,
+  assignedPOs:[],
+  rows:       [],
+  status:     'pending',
+  locked:     false,
+  files:      [],
+};
+
+const DAYS     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  STATE.token  = params.get('token');
+
+  if (!STATE.token) {
+    showError('No access token found.',
+      'Please use the link from your reminder email, or contact your manager for a new link.');
+    return;
+  }
+  loadTimesheet();
+});
+
+// ── API helpers ────────────────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(`${API}/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ── Load timesheet ─────────────────────────────────────────────────────────────
+async function loadTimesheet() {
+  try {
+    const data = await api(`/timesheet?token=${encodeURIComponent(STATE.token)}`);
+
+    STATE.employee   = data.employee;
+    STATE.week       = data.week;
+    STATE.assignedPOs= data.assigned_pos || [];
+
+    if (data.submission) {
+      STATE.rows   = data.submission.rows || data.submission || [];
+      STATE.status = data.submission.status || 'draft';
+      STATE.locked = STATE.status === 'submitted';
+    } else if (data.last_week_data) {
+      // Pre-fill from last week with zeroed hours
+      STATE.rows = (data.last_week_data || []).map(r => ({
+        ...r, days: {}, notes: r.notes || ''
+      }));
+      STATE.status = 'pending';
+    } else {
+      STATE.rows = [newRow()];
+      STATE.status = 'pending';
+    }
+
+    if (!STATE.rows.length) STATE.rows = [newRow()];
+
+    document.getElementById('header-emp').textContent  = STATE.employee.name;
+    document.getElementById('header-week').textContent = formatWeek(STATE.week);
+
+    render();
+  } catch (e) {
+    showError('Could not load timesheet', e.message);
+  }
+}
+
+// ── Data helpers ───────────────────────────────────────────────────────────────
+function newRow() {
+  const po = STATE.assignedPOs[0] || {};
+  return {
+    po_id:       po.id || '',
+    po_number:   po.number || '',
+    client:      po.client || '',
+    description: 'Regular',
+    days:        {},
+    notes:       '',
+  };
+}
+
+function formatWeek(w) {
+  if (!w) return '';
+  const dt  = new Date(w + 'T00:00:00');
+  const end = new Date(dt); end.setDate(dt.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  return `${fmt(dt)} – ${fmt(end)}, ${end.getFullYear()}`;
+}
+
+function rowTotal(row) {
+  return DAY_KEYS.reduce((s, k) => s + (parseFloat(row.days?.[k]) || 0), 0);
+}
+
+function colTotal(dayKey) {
+  return STATE.rows.reduce((s, r) => s + (parseFloat(r.days?.[dayKey]) || 0), 0);
+}
+
+function grandTotal() {
+  return DAY_KEYS.reduce((s, k) => s + colTotal(k), 0);
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  if (STATE.locked) {
+    app.insertAdjacentHTML('beforeend', `
+      <div class="locked-banner">
+        <span style="font-size:20px">✓</span>
+        <span>Timesheet submitted for <strong>${formatWeek(STATE.week)}</strong>.
+        Files have been saved to SharePoint. No further edits are allowed.</span>
+      </div>`);
+  }
+
+  app.appendChild(buildTimesheetCard());
+  app.appendChild(buildAttachmentsCard());
+}
+
+function buildTimesheetCard() {
+  const card = el('div', 'card');
+
+  // Header
+  const hdr = el('div', 'card-header');
+  hdr.innerHTML = `<span>Weekly Timesheet</span>
+    <span class="status-pill ${STATE.status}">${STATE.status.toUpperCase()}</span>`;
+  card.appendChild(hdr);
+
+  // Table
+  const wrap = el('div', ''); wrap.style.overflowX = 'auto';
+  const tbl  = el('table', 'timesheet-table');
+
+  // Head
+  const thead = el('thead');
+  const headRow = el('tr');
+  ['Pay Code / Description','PO Number',...DAYS,'Total','Notes',''].forEach((h, i) => {
+    const th = el('th'); th.textContent = h;
+    if (i >= 2 && i <= 4) th.classList.add('weekend-col');
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow); tbl.appendChild(thead);
+
+  // Body
+  const tbody = el('tbody');
+  STATE.rows.forEach((row, idx) => tbody.appendChild(buildRow(row, idx)));
+
+  // Totals row
+  const totRow = el('tr', 'totals-row');
+  [['TOTALS','',''], ['','','']].forEach(() => {});
+  const tc1 = el('td'); tc1.colSpan = 2; tc1.textContent = 'TOTALS'; tc1.style.textAlign = 'right';
+  totRow.appendChild(tc1);
+  DAY_KEYS.forEach(k => {
+    const td = el('td'); td.id = `col-total-${k}`;
+    const v  = colTotal(k);
+    td.textContent = v > 0 ? v.toFixed(2).replace(/\.00$/, '') : '';
+    totRow.appendChild(td);
+  });
+  const gtd = el('td'); gtd.id = 'grand-total'; gtd.style.fontWeight = '700';
+  const gt  = grandTotal();
+  gtd.textContent = gt > 0 ? gt.toFixed(2).replace(/\.00$/, '') : '';
+  totRow.appendChild(gtd);
+  const ntd = el('td'); totRow.appendChild(ntd);
+  const dtd = el('td'); totRow.appendChild(dtd);
+  tbody.appendChild(totRow);
+
+  tbl.appendChild(tbody); wrap.appendChild(tbl); card.appendChild(wrap);
+
+  // Add row button
+  if (!STATE.locked) {
+    const addBtn = el('button', 'add-row-btn');
+    addBtn.innerHTML = '＋ Add pay code / row';
+    addBtn.onclick = () => {
+      STATE.rows.push(newRow());
+      render();
+    };
+    card.appendChild(addBtn);
+  }
+
+  // Actions
+  if (!STATE.locked) {
+    const actions = el('div', 'actions');
+    const saveBtn = el('button', 'btn btn-outline');
+    saveBtn.innerHTML = '💾 Save Draft';
+    saveBtn.onclick   = () => saveTimesheet('save');
+
+    const submitBtn = el('button', 'btn btn-success');
+    submitBtn.innerHTML = '✓ Submit Timesheet';
+    submitBtn.onclick   = () => {
+      if (confirm(`Submit timesheet for ${formatWeek(STATE.week)}?\n\nOnce submitted, it cannot be edited.`)) {
+        saveTimesheet('submit');
+      }
+    };
+
+    actions.appendChild(saveBtn);
+    actions.appendChild(submitBtn);
+    card.appendChild(actions);
+  }
+
+  return card;
+}
+
+function buildRow(row, idx) {
+  const tr    = el('tr');
+  const rdOnly = STATE.locked;
+
+  // Description
+  const descTd = el('td');
+  const descIn = el('input', 'description-input');
+  descIn.type  = 'text'; descIn.value = row.description || '';
+  descIn.readOnly = rdOnly;
+  descIn.placeholder = 'Pay code / description';
+  descIn.oninput = e => { STATE.rows[idx].description = e.target.value; };
+  descTd.appendChild(descIn); tr.appendChild(descTd);
+
+  // PO selector
+  const poTd = el('td');
+  if (STATE.assignedPOs.length > 1) {
+    const sel = el('select', 'po-select');
+    sel.disabled = rdOnly;
+    STATE.assignedPOs.forEach(po => {
+      const opt = el('option'); opt.value = po.id; opt.textContent = po.label;
+      if (po.id === row.po_id) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.onchange = e => {
+      const po = STATE.assignedPOs.find(p => p.id === e.target.value) || {};
+      STATE.rows[idx].po_id     = po.id || '';
+      STATE.rows[idx].po_number = po.number || '';
+      STATE.rows[idx].client    = po.client || '';
+    };
+    poTd.appendChild(sel);
+  } else {
+    poTd.textContent = row.po_number || (STATE.assignedPOs[0]?.number || '—');
+    poTd.style.fontSize = '12px'; poTd.style.color = '#666';
+  }
+  tr.appendChild(poTd);
+
+  // Day inputs
+  DAY_KEYS.forEach((key, di) => {
+    const td = el('td');
+    if (di <= 1) td.classList.add('weekend-col');
+    const inp = el('input', 'hours');
+    inp.type        = 'number'; inp.min = '0'; inp.max = '24'; inp.step = '0.5';
+    inp.placeholder = '0';
+    inp.value       = row.days?.[key] != null ? row.days[key] : '';
+    inp.readOnly    = rdOnly;
+    inp.oninput = e => {
+      const v = parseFloat(e.target.value);
+      STATE.rows[idx].days = STATE.rows[idx].days || {};
+      STATE.rows[idx].days[key] = isNaN(v) ? null : v;
+      updateTotals();
+    };
+    td.appendChild(inp); tr.appendChild(td);
+  });
+
+  // Row total
+  const totTd = el('td', 'row-total');
+  totTd.id = `row-total-${idx}`;
+  const rt = rowTotal(row);
+  totTd.textContent = rt > 0 ? rt.toFixed(2).replace(/\.00$/, '') : '';
+  tr.appendChild(totTd);
+
+  // Notes
+  const notesTd = el('td');
+  const notesIn = el('textarea', 'notes-input');
+  notesIn.value   = row.notes || '';
+  notesIn.readOnly = rdOnly;
+  notesIn.placeholder = 'Notes...';
+  notesIn.rows    = 1;
+  notesIn.oninput = e => { STATE.rows[idx].notes = e.target.value; };
+  notesTd.appendChild(notesIn); tr.appendChild(notesTd);
+
+  // Delete
+  const delTd = el('td');
+  if (!rdOnly && STATE.rows.length > 1) {
+    const btn = el('button', 'delete-btn');
+    btn.textContent = '✕';
+    btn.onclick = () => { STATE.rows.splice(idx, 1); render(); };
+    delTd.appendChild(btn);
+  }
+  tr.appendChild(delTd);
+
+  return tr;
+}
+
+function updateTotals() {
+  STATE.rows.forEach((row, idx) => {
+    const el_ = document.getElementById(`row-total-${idx}`);
+    if (el_) {
+      const v = rowTotal(row);
+      el_.textContent = v > 0 ? v.toFixed(2).replace(/\.00$/, '') : '';
+    }
+  });
+  DAY_KEYS.forEach(k => {
+    const el_ = document.getElementById(`col-total-${k}`);
+    if (el_) {
+      const v = colTotal(k);
+      el_.textContent = v > 0 ? v.toFixed(2).replace(/\.00$/, '') : '';
+    }
+  });
+  const gt = document.getElementById('grand-total');
+  if (gt) {
+    const v = grandTotal();
+    gt.textContent = v > 0 ? v.toFixed(2).replace(/\.00$/, '') : '';
+  }
+}
+
+function buildAttachmentsCard() {
+  const card = el('div', 'card');
+  const hdr  = el('div', 'card-header');
+  hdr.textContent = 'Attachments (Expense Reports, Receipts, etc.)';
+  card.appendChild(hdr);
+
+  if (!STATE.locked) {
+    const area = el('div', 'upload-area');
+    area.id    = 'drop-area';
+    area.innerHTML = `
+      <div class="upload-icon">📎</div>
+      <strong>Drag & drop files here</strong>
+      <p>or click to browse · PDF, PNG, JPG, XLSX accepted</p>
+      <input type="file" id="file-input" multiple accept=".pdf,.png,.jpg,.jpeg,.xlsx,.doc,.docx">`;
+    area.onclick    = () => document.getElementById('file-input').click();
+    area.ondragover = e => { e.preventDefault(); area.classList.add('drag-over'); };
+    area.ondragleave= () => area.classList.remove('drag-over');
+    area.ondrop     = e => {
+      e.preventDefault(); area.classList.remove('drag-over');
+      handleFiles([...e.dataTransfer.files]);
+    };
+    document.addEventListener('change', e => {
+      if (e.target.id === 'file-input') handleFiles([...e.target.files]);
+    });
+    card.appendChild(area);
+  }
+
+  const fileList = el('div', 'file-list');
+  fileList.id = 'file-list';
+  STATE.files.forEach(f => fileList.appendChild(buildFileItem(f)));
+  card.appendChild(fileList);
+
+  return card;
+}
+
+function buildFileItem(f) {
+  const item = el('div', 'file-item');
+  item.innerHTML = `
+    <span class="file-icon">${fileIcon(f.name)}</span>
+    <span class="file-name">${f.name}</span>
+    <span class="file-status ${f.status}">${f.status}</span>`;
+  return item;
+}
+
+function fileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const map  = { pdf:'📄', png:'🖼️', jpg:'🖼️', jpeg:'🖼️', xlsx:'📊', xls:'📊', doc:'📝', docx:'📝' };
+  return map[ext] || '📎';
+}
+
+async function handleFiles(files) {
+  for (const file of files) {
+    const entry = { name: file.name, status: 'uploading' };
+    STATE.files.push(entry);
+    const fl = document.getElementById('file-list');
+    if (fl) fl.appendChild(buildFileItem(entry));
+
+    try {
+      const buf = await file.arrayBuffer();
+      await fetch(`${API}/api/timesheet/upload?token=${encodeURIComponent(STATE.token)}&filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: buf,
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      });
+      entry.status = 'done';
+    } catch {
+      entry.status = 'error';
+    }
+    const items = document.querySelectorAll('.file-item');
+    const last  = items[items.length - 1];
+    if (last) {
+      const badge = last.querySelector('.file-status');
+      if (badge) { badge.textContent = entry.status; badge.className = `file-status ${entry.status}`; }
+    }
+  }
+}
+
+// ── Save / Submit ──────────────────────────────────────────────────────────────
+async function saveTimesheet(action) {
+  const btns = document.querySelectorAll('.btn');
+  btns.forEach(b => b.disabled = true);
+
+  try {
+    const result = await api('/timesheet', {
+      method: 'POST',
+      body: JSON.stringify({ token: STATE.token, action, rows: STATE.rows }),
+    });
+    STATE.status = result.status;
+    STATE.locked = STATE.status === 'submitted';
+    toast(action === 'submit'
+      ? '✓ Timesheet submitted! Files saved to SharePoint.'
+      : '💾 Draft saved.', action === 'submit' ? 'success' : 'info');
+    render();
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'error');
+    btns.forEach(b => b.disabled = false);
+  }
+}
+
+// ── UI utilities ───────────────────────────────────────────────────────────────
+function el(tag, cls = '') {
+  const e = document.createElement(tag);
+  if (cls) cls.trim().split(/\s+/).forEach(c => e.classList.add(c));
+  return e;
+}
+
+function toast(msg, type = 'info', duration = 4000) {
+  const t   = el('div', `toast ${type}`);
+  t.textContent = msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+
+function showError(title, detail) {
+  document.getElementById('app').innerHTML = `
+    <div class="error-state">
+      <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+      <h2>${title}</h2>
+      <p>${detail || ''}</p>
+      <p style="margin-top:16px;font-size:13px;color:#999">
+        If your link has expired, contact your manager to send a new one.
+      </p>
+    </div>`;
+}
+</script>
+</body>
+</html>
